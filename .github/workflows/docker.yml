@@ -28,6 +28,21 @@ jobs:
         run: |
           curl --fail --retry 20 --retry-delay 5 --retry-all-errors --max-time 10 http://localhost:8501/_stcore/health
 
+      - name: Verificar conexion y datos MySQL
+        run: |
+          APP=$(docker ps --filter publish=8501 --format '{{.ID}}' | head -n 1)
+          docker exec "$APP" python -c "
+          import os
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ['DATABASE_URL'])
+          with engine.connect() as conexion:
+              for tabla in ['sucursal', 'cliente', 'equipo', 'orden', 'usuario', 'evaluacion']:
+                  cantidad = conexion.execute(text('SELECT COUNT(*) FROM ' + tabla)).scalar()
+                  print(tabla, cantidad)
+                  assert cantidad > 0
+          print('Conexion MySQL y datos verificados correctamente')
+          "
+
       - name: Mostrar registros
         if: always()
         run: docker compose logs
