@@ -1,0 +1,28 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root_demo20
+      MYSQL_DATABASE: grupo20
+      MYSQL_USER: grupo20
+      MYSQL_PASSWORD: demo20_local
+    volumes:
+      - datos_mysql:/var/lib/mysql
+      - ./proyecto_grupo20_completo.sql:/docker-entrypoint-initdb.d/01_proyecto.sql:ro
+      - ./usuarios_demo.sql:/docker-entrypoint-initdb.d/02_usuarios.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -ugrupo20 -pdemo20_local grupo20 -e 'SELECT COUNT(*) FROM usuario WHERE password_hash IS NOT NULL' | grep -q '^2$'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+  app:
+    build: .
+    environment:
+      DATABASE_URL: mysql+pymysql://grupo20:demo20_local@db:3306/grupo20
+    ports:
+      - "8501:8501"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  datos_mysql:
